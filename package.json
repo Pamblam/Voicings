@@ -1,12 +1,12 @@
 {
   "name": "voicings",
-  "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "version": "1.0.1",
+  "description": "Calculate all voicings of a given chord for any fretted instrument.",
+  "main": "voicings.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
-  "author": "",
+  "author": "Pamblam",
   "license": "ISC"
 }

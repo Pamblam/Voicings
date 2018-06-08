@@ -32,6 +32,30 @@ const Voicings = (function(){
 		return Array.isArray(noteMap[idx])?noteMap[idx][0]:noteMap[idx];
 	}
 	
+	function allCombos(arr) {
+		if (arr.length == 1) {
+			return arr[0];
+		} else {
+			var result = [];
+			var allCasesOfRest = allCombos(arr.slice(1));  // recur with the rest of array
+			for (var i = 0; i < allCasesOfRest.length; i++) {
+				for (var j = 0; j < arr[0].length; j++) {
+					result.push(arr[0][j] + ',' + allCasesOfRest[i]);
+				}
+			}
+			return result;
+		}
+	}
+	
+	function arrayContainsArray(superset, subset) {
+		if (0 === subset.length) {
+			return false;
+		}
+		return subset.every(function (value) {
+			return (superset.indexOf(value) >= 0);
+		});
+	}
+	
 	class Voicings{
 		constructor(){
 			this.strings=null;
@@ -54,13 +78,48 @@ const Voicings = (function(){
 			return occurences;
 		}
 		
-		getNextVoicing(){
-			// Get all ocurences of each note in the chord, 
-			// Get all combinations of every note (1 per string)
-			// filter each combinations to ones that are less than 6 frets apart
+		getAllVoicings(maxFretDistance){
+			var stringNotes = [], countXes, x1, x2, fretDistance, n, i, o, combos, chord, voicings=[], ca, min, max, avgHeight, filter, ah, bh, ad, bd;
+			fretDistance = f=>{
+				min = f.reduce((a,c)=>c=='x'?a:a!=null&&a<c?a:c,null);
+				max = f.reduce((a,c)=>c=='x'?a:a!=null&&a>c?a:c,null);
+				return max-min;
+			};
+			countXes=a=>a.reduce((a,c)=>c=='x'?a+1:a,0);
+			filter = f=>{
+				if(undefined==maxFretDistance) return true;
+				return maxFretDistance>=fretDistance(f);
+			};
+			avgHeight = f=>f.reduce((a,c)=>c=='x'?a:a+parseInt(c),0)/f.filter(a=>a!=='x'&&a!==0).length;
+			for(n=0; n<this.strings; n++) stringNotes.push(['x']);
+			for(n=0; n<this.chord.length; n++){
+				o = this.getAllOccurencesOfNote(this.chord[n]);
+				for(i=0; i<o.length; i++) stringNotes[i].push(...o[i]);
+			}
+			combos = allCombos(stringNotes);
+			for(i=combos.length; i--;){
+				ca = combos[i].split(",").map(n=>n=='x'?n:parseInt(n));
+				chord = ca.map((n,idx)=>n=='x'?n:this.fretboard[idx][n]);
+				if(!arrayContainsArray(chord, this.chord)) continue;
+				if(filter(ca)) voicings.push(ca);
+			}
+			voicings.sort((a,b)=>{
+				x1 = countXes(a);
+				x2 = countXes(b);
+				if(x1 != x2) return x1<x2?-1:1
+				ah = avgHeight(a);
+				bh = avgHeight(b);
+				if(ah != bh) return ah<bh?-1:1;
+				ad = fretDistance(a);
+				bd = fretDistance(b);
+				if(ad != bd) return ad<bd?-1:1;
+				return 0;
+			});
+			return voicings;
 		}
 		
 		getFretboard(){
+			if(this.fretboard.length) return this.fretboard;
 			var fb=[], string, note;
 			for(var i=0; i<this.tuning.length; i++){
 				string=[];
